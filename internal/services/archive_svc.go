@@ -18,11 +18,10 @@ func (as *ArchiveService) GetArchiveInfo(req dto.ArchiveInfoRequest) (dto.Archiv
 
 	fileHeader := req.FileHeader
 	mpFile, err := fileHeader.Open()
-	defer mpFile.Close()
-
 	if err != nil {
 		return dto.ArchiveInfoResponse{}, nil
 	}
+	defer mpFile.Close()
 
 	zipReader, err := zip.NewReader(mpFile, fileHeader.Size)
 	if err != nil {
@@ -64,4 +63,8 @@ func (as *ArchiveService) GetArchiveInfo(req dto.ArchiveInfoRequest) (dto.Archiv
 
 	return res, nil
 
+}
+
+func (as *ArchiveService) Compress(req dto.ArchiveCompressRequest) (dto.ArchiveCompressResponse, error) {
+	return dto.ArchiveCompressResponse{}, nil
 }

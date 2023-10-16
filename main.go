@@ -4,8 +4,6 @@ import (
 	"archive/zip"
 	"fmt"
 	"log"
-
-	"github.com/iliyasali2107/archiver/internal/controllers/archive_info"
 )
 
 func main() {
@@ -17,10 +15,6 @@ func main() {
 	}
 
 	defer r.Close()
-
-	res := archive_info.ArchiveInfoResponse{}
-
-	res.
 
 	for _, f := range r.File {
 

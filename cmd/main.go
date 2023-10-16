@@ -14,11 +14,12 @@ func main() {
 
 	archiveGroup := r.Group("/archive")
 
-	archiveInfoSvc := services.ArchiveService{}
+	archiveSvc := &services.ArchiveService{}
 
-	controller := controllers.NewController(&archiveInfoSvc)
+	controller := controllers.NewController(archiveSvc, archiveSvc)
 
 	archiveGroup.POST("/info", controller.ArchiveInfoCtrl.GetArchiveInfo)
+	archiveGroup.POST("/compress", controller.ArchiveCompresCtrl.Compress)
 
 	fmt.Println("running ...")
 	r.Run(":8080")

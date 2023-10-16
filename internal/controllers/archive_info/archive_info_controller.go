@@ -23,13 +23,13 @@ func NewArchiveInfoCtrl(svc ArchiveInfoSvc) *ArchiveInfoCtrl {
 
 const formKey = "file"
 
-func (ad *ArchiveInfoCtrl) GetArchiveInfo(c *gin.Context) {
+func (aic *ArchiveInfoCtrl) GetArchiveInfo(c *gin.Context) {
 	file, err := c.FormFile(formKey)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "your request has no file"})
 	}
 
-	res, err := ad.svc.GetArchiveInfo(dto.ArchiveInfoRequest{FileHeader: file})
+	res, err := aic.svc.GetArchiveInfo(dto.ArchiveInfoRequest{FileHeader: file})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "something unexpected occured"})
 	}

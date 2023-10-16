@@ -6,6 +6,10 @@ import (
 	"github.com/iliyasali2107/archiver/internal/models"
 )
 
+type ArchiveInfoRequest struct {
+	FileHeader *multipart.FileHeader
+}
+
 type ArchiveInfoResponse struct {
 	FileName    string        `json:"filename"`
 	ArchiveSize float64       `json:"archive_size"`
@@ -14,6 +18,8 @@ type ArchiveInfoResponse struct {
 	Files       []models.File `json:"files"`
 }
 
-type ArchiveInfoRequest struct {
-	FileHeader *multipart.FileHeader
+type ArchiveCompressRequest struct {
+}
+
+type ArchiveCompressResponse struct {
 }

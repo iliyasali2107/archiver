@@ -1,16 +1,14 @@
 package archive_compress
 
 import (
-	"archive/zip"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/iliyasali2107/archiver/internal/dto"
 	"github.com/iliyasali2107/archiver/internal/helpers/random"
+	"github.com/iliyasali2107/archiver/internal/services/archive"
 )
 
 type ArchiveCompressCtrl struct {
@@ -19,6 +17,7 @@ type ArchiveCompressCtrl struct {
 
 type ArchiveCompressSvc interface {
 	Compress(dto.ArchiveCompressRequest) (dto.ArchiveCompressResponse, error)
+	Clear(filename string) error
 }
 
 func NewArchiveCompressCtrl(svc ArchiveCompressSvc) *ArchiveCompressCtrl {
@@ -27,14 +26,14 @@ func NewArchiveCompressCtrl(svc ArchiveCompressSvc) *ArchiveCompressCtrl {
 	}
 }
 
-const formKey = "files[]"
-const zipStoragePath = "archives/"
+const (
+	formKey = "files[]"
+)
 
 func (acc *ArchiveCompressCtrl) Compress(c *gin.Context) {
-
 	form, err := c.MultipartForm()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "there is no files in request"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to get multipart form"})
 		return
 	}
 	files, ok := form.File[formKey]
@@ -43,51 +42,25 @@ func (acc *ArchiveCompressCtrl) Compress(c *gin.Context) {
 		return
 	}
 
-	randZipName := random.RandomZipFileName()
-	filePath := zipStoragePath + randZipName
-	zipFile, err := os.Create(filePath)
+	req := dto.ArchiveCompressRequest{Files: files}
+	res, err := acc.svc.Compress(req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, err)
+		if err == archive.ErrNotAllowedMIMEType {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "you send file with MIMEType that is not allowed"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-	defer zipFile.Close()
 
-	zipWriter := zip.NewWriter(zipFile)
-	defer zipWriter.Close()
-	for _, fileHeader := range files {
-		file, err := fileHeader.Open()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, err)
-			return
-		}
-		defer file.Close()
+	buf := res.Buffer
 
-		// f := &zip.FileHeader{Name: fileHeader.Filename, Method: zip.Deflate}
-		createdDest, err := zipWriter.Create(fileHeader.Filename)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, err)
-			return
-		}
-
-		_, err = io.Copy(createdDest, file)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, err)
-			return
-		}
-
-	}
-
-	fileInfo, err := zipFile.Stat()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	disposition := fmt.Sprintf("attachment; filename=%s", fileInfo.Name())
+	disposition := fmt.Sprintf("attachment; filename=%s", random.RandomZipFileName())
 	c.Writer.Header().Set("Content-Type", "application/zip")
 	c.Writer.Header().Set("Content-Disposition", disposition)
-	// c.Writer.Header().Set("Content-Length", fmt.Sprintf("%d", fileInfo.Size()-int64(100000)))
 
-	c.File(filePath)
-	// c.FileAttachment(filePath, fileInfo.Name())
-
+	_, err = io.Copy(c.Writer, buf)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+	}
 }

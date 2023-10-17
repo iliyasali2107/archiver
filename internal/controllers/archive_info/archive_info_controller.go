@@ -32,8 +32,8 @@ func (aic *ArchiveInfoCtrl) GetArchiveInfo(c *gin.Context) {
 	res, err := aic.svc.GetArchiveInfo(dto.ArchiveInfoRequest{FileHeader: file})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "something unexpected occured"})
+		return
 	}
 
 	c.JSON(http.StatusOK, res)
-
 }

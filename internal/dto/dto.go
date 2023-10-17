@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"bytes"
 	"mime/multipart"
 
 	"github.com/iliyasali2107/archiver/internal/models"
@@ -19,7 +20,16 @@ type ArchiveInfoResponse struct {
 }
 
 type ArchiveCompressRequest struct {
+	Files []*multipart.FileHeader
 }
 
 type ArchiveCompressResponse struct {
+	Buffer *bytes.Buffer
 }
+
+type SendMailRequest struct {
+	ReceiverEmails []string
+	FileHeader     *multipart.FileHeader
+}
+
+type SendMailResponse struct{}

@@ -1,24 +1,35 @@
 package main
 
 import (
-	"archive/zip"
 	"fmt"
 	"log"
+
+	"github.com/gin-gonic/gin"
+	"github.com/iliyasali2107/archiver/internal/config"
+	"github.com/iliyasali2107/archiver/internal/controllers"
+	"github.com/iliyasali2107/archiver/internal/services/archive"
+	"github.com/iliyasali2107/archiver/internal/services/mail"
 )
 
 func main() {
-	testFile := "test.zip"
-
-	r, err := zip.OpenReader(testFile)
+	cfg, err := config.New()
 	if err != nil {
+		fmt.Println("qwerqwer")
 		log.Fatal(err)
 	}
 
-	defer r.Close()
+	archiveSvc := archive.NewArchiveSvc()
+	mailSvc := mail.NewMailSvc(cfg)
 
-	for _, f := range r.File {
+	controller := controllers.NewController(archiveSvc, archiveSvc, mailSvc)
 
-		fmt.Println(f.Name)
-	}
+	r := gin.Default()
+	archiveGroup := r.Group("/archive")
 
+	archiveGroup.POST("/info", controller.ArchiveInfoCtrl.GetArchiveInfo)
+	archiveGroup.POST("/compress", controller.ArchiveCompresCtrl.Compress)
+	archiveGroup.POST("/send", controller.MailSenderCtrl.SendFile)
+
+	fmt.Println("running ...")
+	r.Run(":8080")
 }

@@ -1,7 +1,12 @@
-package services
+package archive
 
 import (
 	"archive/zip"
+	"bytes"
+	"errors"
+	"io"
+	"net/http"
+	"os"
 
 	"github.com/iliyasali2107/archiver/internal/dto"
 	"github.com/iliyasali2107/archiver/internal/helpers/mimetype"
@@ -10,8 +15,21 @@ import (
 
 type ArchiveService struct{}
 
+func NewArchiveSvc() *ArchiveService {
+	return &ArchiveService{}
+}
+
 // size is 512, because for mimetype check we need only first 512 bytes.
 const buffSize = 512
+
+var legalMIMETypes = []string{
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+	"application/xml",
+	"image/jpeg",
+	"image/png",
+}
+
+var ErrNotAllowedMIMEType = errors.New("not allowed MIMEType is used")
 
 func (as *ArchiveService) GetArchiveInfo(req dto.ArchiveInfoRequest) (dto.ArchiveInfoResponse, error) {
 	var res dto.ArchiveInfoResponse
@@ -62,9 +80,52 @@ func (as *ArchiveService) GetArchiveInfo(req dto.ArchiveInfoRequest) (dto.Archiv
 	res.Files = files
 
 	return res, nil
-
 }
 
 func (as *ArchiveService) Compress(req dto.ArchiveCompressRequest) (dto.ArchiveCompressResponse, error) {
-	return dto.ArchiveCompressResponse{}, nil
+	files := req.Files
+
+	buf := new(bytes.Buffer)
+	zipWriter := zip.NewWriter(buf)
+	defer zipWriter.Close()
+
+	for _, fileHeader := range files {
+		file, err := fileHeader.Open()
+		if err != nil {
+			return dto.ArchiveCompressResponse{}, err
+		}
+		defer file.Close()
+
+		mimeCheckerBuffer := make([]byte, buffSize)
+		_, err = file.Read(mimeCheckerBuffer)
+		if err != nil {
+			return dto.ArchiveCompressResponse{}, err
+		}
+
+		mimeType := http.DetectContentType(mimeCheckerBuffer)
+		if !mimetype.Contains(legalMIMETypes, mimeType) {
+			return dto.ArchiveCompressResponse{}, ErrNotAllowedMIMEType
+		}
+
+		fh := &zip.FileHeader{Name: fileHeader.Filename, Flags: 0x800, Method: zip.Deflate}
+		destWriter, err := zipWriter.CreateHeader(fh)
+		if err != nil {
+			return dto.ArchiveCompressResponse{}, err
+		}
+
+		_, err = io.Copy(destWriter, file)
+		if err != nil {
+			return dto.ArchiveCompressResponse{}, err
+		}
+
+		zipWriter.Close()
+	}
+
+	return dto.ArchiveCompressResponse{
+		Buffer: buf,
+	}, nil
+}
+
+func (as *ArchiveService) Clear(filename string) error {
+	return os.Remove(filename)
 }

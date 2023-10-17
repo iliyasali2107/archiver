@@ -20,4 +20,4 @@ COPY --from=build /app .
 EXPOSE 8080
 
 # Set the entry point for the container
-CMD ["/app/main"]]
+CMD ["/app/main"]
